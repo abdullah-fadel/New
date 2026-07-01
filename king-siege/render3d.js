@@ -2,6 +2,7 @@ import * as THREE from "./vendor/three.module.min.js";
 
 const COLOR = {
   heroBody: 0x2b5fcf, heroDark: 0x1e3f8f, heroGold: 0xf0c443, skin: 0xf4cfa0,
+  heroPurple: 0x7a3f74, heroPurpleDark: 0x5c2e57, heroSilver: 0xb9bfc7, heroCream: 0xf0e6d2, heroMace: 0x6e2430,
   enemyBody: 0xd13b3b, enemyDark: 0x8f2323, bossBody: 0xa4232f, bossDark: 0x6e1a1a,
   rock: 0x8b8b86, gate: 0x8a5a35, gateRoof: 0x6a3f22, gateCharred: 0x241a14,
   banner: 0x3468c9, amber: 0xf5a623, barrel: 0x8a5a2f, barrelBand: 0x4a3016,
@@ -93,10 +94,62 @@ function buildHumanoid({ scale = 1, bodyColor, darkColor, hatColor }) {
 }
 
 function buildHeroMesh() {
-  const g = buildHumanoid({ scale: 1, bodyColor: COLOR.heroBody, darkColor: COLOR.heroDark, hatColor: COLOR.heroGold });
-  const cape = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.05), mat(COLOR.heroDark));
-  cape.position.set(0, 0.5, -0.22); cape.rotation.x = 0.25;
-  g.add(cape);
+  const g = new THREE.Group();
+  const parts = [];
+
+  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.22, 8), mat(COLOR.heroBody));
+  legs.position.y = 0.12; g.add(legs); parts.push(legs);
+
+  const robeY = 0.63;
+  const robe = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 0.34, 3, 8), mat(COLOR.heroPurple));
+  robe.position.y = robeY; g.add(robe); parts.push(robe);
+
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.045, 6, 12), mat(COLOR.heroGold, { roughness: 0.4, metalness: 0.5 }));
+  hem.rotation.x = Math.PI / 2; hem.position.y = robeY - 0.35; g.add(hem); parts.push(hem);
+
+  const armor = new THREE.Mesh(new THREE.ConeGeometry(0.27, 0.5, 6), mat(COLOR.heroSilver, { roughness: 0.35, metalness: 0.55 }));
+  armor.rotation.x = Math.PI; armor.scale.z = 0.55;
+  armor.position.set(0, robeY + 0.02, 0.22); g.add(armor); parts.push(armor);
+
+  const ruff = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.075, 6, 12), mat(COLOR.heroCream));
+  ruff.rotation.x = Math.PI / 2; ruff.position.y = robeY + 0.42; g.add(ruff); parts.push(ruff);
+
+  const padGeo = new THREE.SphereGeometry(0.22, 7, 5);
+  for (const side of [-1, 1]) {
+    const pad = new THREE.Mesh(padGeo, mat(COLOR.heroPurple));
+    pad.scale.set(1, 0.85, 1);
+    pad.position.set(side * 0.42, robeY + 0.34, 0);
+    g.add(pad); parts.push(pad);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 5, 10), mat(COLOR.heroGold, { roughness: 0.4, metalness: 0.5 }));
+    ring.position.copy(pad.position); ring.position.x += side * 0.02;
+    ring.rotation.y = Math.PI / 2;
+    g.add(ring); parts.push(ring);
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.26, 2, 5), mat(COLOR.heroBody));
+    arm.position.set(side * 0.4, robeY + 0.04, 0.06);
+    arm.rotation.z = side * -0.25;
+    g.add(arm); parts.push(arm);
+  }
+
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.24, 0), mat(COLOR.skin));
+  head.position.y = robeY + 0.42 + 0.24; g.add(head); parts.push(head);
+  const beard = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 5), mat(0x4a3423));
+  beard.position.set(0, head.position.y - 0.24, 0.08); beard.rotation.x = Math.PI;
+  g.add(beard); parts.push(beard);
+  const hat = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.7), mat(COLOR.heroPurpleDark));
+  hat.position.y = head.position.y + 0.12; g.add(hat); parts.push(hat);
+
+  const maceHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.55, 6), mat(COLOR.heroGold, { roughness: 0.4, metalness: 0.5 }));
+  const maceHead = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 0), mat(COLOR.heroMace, { roughness: 0.5, metalness: 0.3 }));
+  const mace = new THREE.Group();
+  maceHandle.position.y = -0.02; maceHead.position.y = 0.28;
+  mace.add(maceHandle, maceHead);
+  mace.position.set(0.5, robeY - 0.05, 0.15);
+  mace.rotation.z = -0.5;
+  g.add(mace); parts.push(maceHandle, maceHead);
+
+  addShadowBlob(g, 0.36);
+  g.userData.parts = parts;
+  g.userData.height = head.position.y + 0.3;
   return g;
 }
 function buildEnemyMesh(type) {
@@ -200,12 +253,12 @@ export function init(canvasEl, { WORLD, GATE, OBSTACLES, SPAWN_POINTS, ENEMY_DEF
   camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
   scene.add(staticGroup);
 
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x3a5a2a, 1.1);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x5a7a4a, 1.15);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xfff2d0, 1.35);
+  const sun = new THREE.DirectionalLight(0xfff2d0, 1.2);
   sun.position.set(-6, 10, 8);
   scene.add(sun);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
 
   groundMat = new THREE.MeshStandardMaterial({ map: makeGroundTexture(WORLD, SPAWN_POINTS, GATE), roughness: 1 });
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(WORLD.w / 30, WORLD.h / 30), groundMat);
