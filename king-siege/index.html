@@ -38,6 +38,13 @@
 <div id="banner"></div>
 <div id="floatTexts"></div>
 
+<div class="modal hidden" id="updateToast" style="align-items:flex-end;justify-content:center;background:transparent;pointer-events:none;">
+  <div class="card" style="pointer-events:auto;max-width:340px;padding:14px 16px;margin-bottom:110px;display:flex;align-items:center;gap:12px;">
+    <span id="updateMsg" style="flex:1;text-align:start;font-size:14px;">New update available</span>
+    <button class="bigbtn" id="updateReloadBtn" style="width:auto;margin:0;padding:9px 14px;font-size:13px;">Reload</button>
+  </div>
+</div>
+
 <!-- virtual joysticks -->
 <div class="stick-base" id="moveBase"></div>
 <div class="stick-nub" id="moveNub"></div>

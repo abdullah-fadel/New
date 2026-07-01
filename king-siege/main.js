@@ -66,6 +66,8 @@ function applyLangToDom() {
   $("gateLbl").textContent = STR.gate;
   $("hpLbl").textContent = STR.king;
   $("dashKey").textContent = isTouchDevice() ? "" : "Space";
+  $("updateMsg").textContent = STR.updateAvailable;
+  $("updateReloadBtn").textContent = STR.updateReload;
   renderShop();
 }
 function isTouchDevice() { return matchMedia("(pointer:coarse)").matches; }
@@ -730,5 +732,13 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    let controllerAtLoad = navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!controllerAtLoad) { controllerAtLoad = navigator.serviceWorker.controller; return; }
+      $("updateToast").classList.remove("hidden");
+    });
+  });
 }
+$("updateReloadBtn").addEventListener("click", () => location.reload());

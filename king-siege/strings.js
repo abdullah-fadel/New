@@ -51,6 +51,8 @@ export const STRINGS = {
     goldAbbrev: "ذهب",
     tapToPlace: "اضغط لوضع الفخ عند اتجاه نظرك",
     fps: "إطار/ث",
+    updateAvailable: "تحديث جديد متوفر",
+    updateReload: "إعادة التحميل",
   },
   en: {
     dir: "ltr",
@@ -103,6 +105,8 @@ export const STRINGS = {
     goldAbbrev: "gold",
     tapToPlace: "Tap to place trap toward your aim",
     fps: "fps",
+    updateAvailable: "New update available",
+    updateReload: "Reload",
   },
 };
 
