@@ -5,9 +5,10 @@ gate-defense action seen in mobile ads like *Kingshot* — built stronger and mo
 manual movement + aiming, a dash, three deployable traps (spike, rolling barrel, arrow tower),
 an escalating wave/boss system, and a gold upgrade shop between waves.
 
-Bilingual (Arabic / English, with RTL support), works offline, no external assets or network
-calls — every sprite is hand-drawn vector art on `<canvas>` and every sound effect is synthesized
-with the Web Audio API.
+Bilingual (Arabic / English, with RTL support), works offline, no network calls at runtime.
+Rendered with a real WebGL scene (Three.js, vendored) — low-poly toon characters, terrain,
+props and traps, with dynamic gate damage tinting — while the HUD/menus stay plain DOM for
+crisp, localizable text. Every sound effect is synthesized live with the Web Audio API.
 
 ## Play it
 
@@ -27,6 +28,8 @@ Append `?dev=1` to the URL to show the FPS/debug overlay.
 ## Structure
 
 - `king-siege/index.html` — page shell + HUD/menu overlays
-- `king-siege/main.js` — game loop, input, simulation, rendering (single module, no build step)
+- `king-siege/main.js` — game loop, input, simulation (no build step)
+- `king-siege/render3d.js` — the Three.js scene: meshes, materials, camera, lighting
 - `king-siege/strings.js` — all player-visible text (Arabic/English)
 - `king-siege/style.css` — HUD, menus, joystick and action-bar styling
+- `king-siege/vendor/` — vendored Three.js (see `THREE_LICENSE`)

@@ -1,4 +1,5 @@
 import { STRINGS, detectLang, saveLang } from "./strings.js";
+import * as R3D from "./render3d.js";
 
 /* ---------------- CONFIG (frozen agency metrics) ---------------- */
 const WORLD = { w: 1700, h: 1300 };
@@ -111,7 +112,6 @@ const S = {
   unlocked: { spike: true, barrel: false, tower: false },
   upgrades: { hp: 0, dmg: 0, firerate: 0, dash: 0, gateRepair: 0 },
   shopOffers: [],
-  camera: { x: 0, y: 0 },
 };
 try { S.bestWave = parseInt(localStorage.getItem("ks_best_wave") || "0", 10) || 0; } catch (e) {}
 
@@ -218,18 +218,12 @@ bindHoldButton($("trapBtn2"), () => heldEdge.add("trap:barrel"));
 bindHoldButton($("trapBtn3"), () => heldEdge.add("trap:tower"));
 $("pauseBtn").addEventListener("pointerdown", (e) => { e.preventDefault(); togglePause(); });
 
-/* ---------------- canvas / camera ---------------- */
-const canvas = $("c"), ctx = canvas.getContext("2d");
-const DPR_CAP = 1.5;
-function resize() {
-  const dpr = Math.min(devicePixelRatio || 1, DPR_CAP);
-  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
-  canvas.style.width = innerWidth + "px"; canvas.style.height = innerHeight + "px";
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-}
-addEventListener("resize", resize); addEventListener("orientationchange", resize); resize();
+/* ---------------- 3D scene ---------------- */
+const canvas = $("c");
+R3D.init(canvas, { WORLD, GATE, OBSTACLES, SPAWN_POINTS, ENEMY_DEF });
+addEventListener("resize", R3D.resize); addEventListener("orientationchange", R3D.resize);
 
-function worldToScreen(x, y) { return { x: x - S.camera.x, y: y - S.camera.y }; }
+function worldToScreen(x, y) { return R3D.worldToScreen(x, y, 0.5); }
 
 /* ---------------- helpers ---------------- */
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -420,7 +414,7 @@ function update(dtMs) {
   // aim
   if (aimVec.active) { p.aimDir = norm(aimVec.x, aimVec.y); p.facing = p.aimDir; }
   else if (aimStick.vec && Math.hypot(aimStick.vec.x, aimStick.vec.y) > 0.15) { p.aimDir = norm(aimStick.vec.x, aimStick.vec.y); p.facing = p.aimDir; }
-  else if (mouseAim) { const s = worldToScreen(p.x, p.y); p.aimDir = norm(mouseAim.x - s.x, mouseAim.y - s.y); p.facing = p.aimDir; }
+  else if (mouseAim) { const g = R3D.screenToGroundXZ(mouseAim.x, mouseAim.y); if (g) { p.aimDir = norm(g.x - p.x, g.y - p.y); p.facing = p.aimDir; } }
   else { p.aimDir = p.facing; }
 
   if (p.invulnTimer > 0) p.invulnTimer -= dt;
@@ -455,11 +449,7 @@ function update(dtMs) {
 
   if (S.spawnQueue.length === 0 && S.enemies.filter(e => !e.dead).length === 0) waveClear();
 
-  held.forEach(() => {}); // no-op keep structure
   heldEdge.clear();
-  S.camera.x = Math.max(0, Math.min(WORLD.w - innerWidth, p.x - innerWidth / 2));
-  S.camera.y = Math.max(0, Math.min(WORLD.h - innerHeight, p.y - innerHeight / 2));
-
   updateHud();
 }
 
@@ -714,146 +704,9 @@ $("langBtn1").addEventListener("click", () => setLang(lang === "ar" ? "en" : "ar
 applyLangToDom();
 
 /* ---------------- render ---------------- */
-const PALETTE = {
-  grass: "#5fae4a", grassDark: "#4f9a3d", path: "#d9c08a", pathEdge: "#c2a468",
-  rock: "#8b8b86", rockDark: "#6f6f6a", tree: "#3f7a3f",
-  hero: "#2b5fcf", heroGold: "#f0c443", heroDark: "#1e3f8f",
-  enemy: "#d13b3b", enemyDark: "#8f2323", boss: "#a4232f",
-  amber: "#f5a623", gate: "#8a5a35", gateRoof: "#6a3f22", banner: "#3468c9",
-};
-function drawArena() {
-  ctx.fillStyle = PALETTE.grass; ctx.fillRect(0, 0, innerWidth, innerHeight);
-  ctx.save(); ctx.translate(-S.camera.x, -S.camera.y);
-  ctx.fillStyle = PALETTE.grassDark;
-  for (let gx = 0; gx < WORLD.w; gx += 90) for (let gy = 0; gy < WORLD.h; gy += 90) {
-    if ((Math.floor(gx / 90) + Math.floor(gy / 90)) % 2 === 0) ctx.fillRect(gx, gy, 90, 90);
-  }
-  ctx.strokeStyle = PALETTE.pathEdge; ctx.lineWidth = 74; ctx.lineCap = "round";
-  ctx.beginPath();
-  for (const sp of SPAWN_POINTS) { ctx.moveTo(sp.x, sp.y); ctx.lineTo(GATE.x, GATE.y); }
-  ctx.stroke();
-  ctx.strokeStyle = PALETTE.path; ctx.lineWidth = 60;
-  ctx.beginPath();
-  for (const sp of SPAWN_POINTS) { ctx.moveTo(sp.x, sp.y); ctx.lineTo(GATE.x, GATE.y); }
-  ctx.stroke();
-  ctx.restore();
-}
-function drawObstacles() {
-  for (const o of OBSTACLES) {
-    const s = worldToScreen(o.x, o.y);
-    ctx.fillStyle = PALETTE.rockDark; ctx.beginPath(); ctx.ellipse(s.x, s.y + 6, o.r * 0.95, o.r * 0.55, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = PALETTE.rock; ctx.beginPath(); ctx.arc(s.x, s.y - o.r * 0.15, o.r * 0.8, 0, Math.PI * 2); ctx.fill();
-  }
-}
-function drawGate() {
-  const s = worldToScreen(GATE.x, GATE.y);
-  ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.beginPath(); ctx.ellipse(s.x, s.y + 60, 96, 30, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = PALETTE.gate; ctx.fillRect(s.x - 90, s.y - 40, 180, 90);
-  ctx.fillStyle = PALETTE.gateRoof;
-  ctx.beginPath(); ctx.moveTo(s.x - 100, s.y - 40); ctx.lineTo(s.x, s.y - 110); ctx.lineTo(s.x + 100, s.y - 40); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#2a1a10"; ctx.fillRect(s.x - 26, s.y - 5, 52, 45);
-  ctx.strokeStyle = PALETTE.banner; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(s.x, s.y - 110); ctx.lineTo(s.x, s.y - 150); ctx.stroke();
-  ctx.fillStyle = PALETTE.banner; ctx.beginPath(); ctx.moveTo(s.x, s.y - 150); ctx.lineTo(s.x + 34, s.y - 140); ctx.lineTo(s.x, s.y - 128); ctx.closePath(); ctx.fill();
-  if (S.gate.hp < GATE.maxHp) {
-    const pct = S.gate.hp / GATE.maxHp;
-    ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(s.x - 60, s.y - 128, 120, 10);
-    ctx.fillStyle = "#4f95ff"; ctx.fillRect(s.x - 60, s.y - 128, 120 * pct, 10);
-  }
-}
-function drawSpawnMarkers() {
-  for (const m of S.spawnMarkers) {
-    const s = worldToScreen(m.x, m.y);
-    const pulse = 1 - m.t / 0.7;
-    ctx.strokeStyle = `rgba(227,75,75,${0.9 - pulse * 0.5})`; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(s.x, s.y, 14 + pulse * 26, 0, Math.PI * 2); ctx.stroke();
-  }
-}
-function drawCharacter(s, r, bodyColor, darkColor, aim, hitFlash) {
-  ctx.save(); ctx.translate(s.x, s.y);
-  ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(0, r * 0.8, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-  const rot = Math.atan2(aim.y, aim.x);
-  ctx.rotate(rot);
-  ctx.fillStyle = hitFlash > 0 ? "#ffffff" : darkColor;
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = hitFlash > 0 ? "#ffdddd" : bodyColor;
-  ctx.beginPath(); ctx.arc(-r * 0.12, 0, r * 0.82, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#f4cfa0";
-  ctx.beginPath(); ctx.arc(r * 0.32, 0, r * 0.42, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-function drawPlayer() {
-  const p = S.player, s = worldToScreen(p.x, p.y);
-  if (p.downedTimer > 0) { ctx.globalAlpha = 0.4; drawCharacter(s, p.r, PALETTE.hero, PALETTE.heroDark, p.facing, 0); ctx.globalAlpha = 1; return; }
-  if (p.invulnTimer > 0 && Math.floor(p.invulnTimer * 20) % 2 === 0) ctx.globalAlpha = 0.5;
-  drawCharacter(s, p.r, PALETTE.hero, PALETTE.heroDark, p.facing, p.hitFlash);
-  ctx.fillStyle = PALETTE.heroGold;
-  ctx.save(); ctx.translate(s.x, s.y - p.r - 6);
-  ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(0, -8); ctx.lineTo(8, 4); ctx.lineTo(4, 2); ctx.lineTo(0, 5); ctx.lineTo(-4, 2); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  ctx.globalAlpha = 1;
-}
-function drawEnemies() {
-  for (const e of S.enemies) {
-    const s = worldToScreen(e.x, e.y);
-    if (s.x < -60 || s.x > innerWidth + 60 || s.y < -60 || s.y > innerHeight + 60) continue;
-    const aim = norm((e.target === "player" ? S.player.x : GATE.x) - e.x, (e.target === "player" ? S.player.y : GATE.y) - e.y);
-    const color = e.type === "boss" ? PALETTE.boss : PALETTE.enemy;
-    drawCharacter(s, e.r, color, PALETTE.enemyDark, aim, e.hitFlash);
-    if (e.type === "boss" && e.slamming) {
-      ctx.strokeStyle = "rgba(255,80,40,.7)"; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(s.x, s.y, ENEMY_DEF.boss.slamRadius * (1 - e.slamTimer / ENEMY_DEF.boss.slamWindup), 0, Math.PI * 2); ctx.stroke();
-    }
-    const barW = e.r * 1.7;
-    ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(s.x - barW / 2, s.y - e.r - 12, barW, 5);
-    ctx.fillStyle = "#ff5b5b"; ctx.fillRect(s.x - barW / 2, s.y - e.r - 12, barW * Math.max(0, e.hp / e.maxHp), 5);
-  }
-}
-function drawTraps() {
-  for (const t of S.traps) {
-    const s = worldToScreen(t.x, t.y);
-    if (t.type === "spike") {
-      ctx.fillStyle = t.triggered ? "#8a6a3a" : PALETTE.amber;
-      for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(s.x + i * 9, s.y + 8); ctx.lineTo(s.x + i * 9 + 4, s.y - 10); ctx.lineTo(s.x + i * 9 + 8, s.y + 8); ctx.closePath(); ctx.fill(); }
-    } else if (t.type === "barrel") {
-      ctx.fillStyle = "#8a5a2f"; ctx.beginPath(); ctx.arc(s.x, s.y, t.r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#4a3016"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(s.x, s.y, t.r - 4, 0, Math.PI * 2); ctx.stroke();
-    }
-  }
-  for (const t of S.turrets) {
-    const s = worldToScreen(t.x, t.y);
-    ctx.fillStyle = "#7a5230"; ctx.fillRect(s.x - 4, s.y - 4, 8, 22);
-    ctx.fillStyle = PALETTE.amber; ctx.beginPath(); ctx.arc(s.x, s.y - 8, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(245,166,35,.25)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(s.x, s.y, t.range, 0, Math.PI * 2); ctx.stroke();
-  }
-}
-function drawPickups() {
-  for (const c of S.pickups) {
-    const s = worldToScreen(c.x, c.y);
-    ctx.fillStyle = "#8a6a1a"; ctx.beginPath(); ctx.arc(s.x, s.y, c.r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#ffd766"; ctx.beginPath(); ctx.arc(s.x, s.y, c.r - 2.5, 0, Math.PI * 2); ctx.fill();
-  }
-}
-function drawProjectiles() {
-  ctx.strokeStyle = PALETTE.amber; ctx.lineWidth = 3;
-  for (const a of S.projectiles) { const s = worldToScreen(a.x, a.y); const d = norm(a.vx, a.vy);
-    ctx.beginPath(); ctx.moveTo(s.x - d.x * 12, s.y - d.y * 12); ctx.lineTo(s.x + d.x * 6, s.y + d.y * 6); ctx.stroke(); }
-  ctx.strokeStyle = "#e34b4b";
-  for (const a of S.enemyProjectiles) { const s = worldToScreen(a.x, a.y); const d = norm(a.vx, a.vy);
-    ctx.beginPath(); ctx.moveTo(s.x - d.x * 12, s.y - d.y * 12); ctx.lineTo(s.x + d.x * 6, s.y + d.y * 6); ctx.stroke(); }
-}
-function drawParticles() {
-  for (const p of S.particles) {
-    const s = worldToScreen(p.x, p.y);
-    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(s.x, s.y, p.size, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
 function render() {
-  drawArena();
-  drawObstacles(); drawSpawnMarkers(); drawGate(); drawTraps(); drawPickups();
-  if (S.player) drawPlayer();
-  drawEnemies(); drawProjectiles(); drawParticles();
+  if (!S.player) return;
+  R3D.sync(S, { GATE, ENEMY_DEF });
 }
 
 /* ---------------- main loop ---------------- */
