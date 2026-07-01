@@ -1,4 +1,5 @@
 import * as THREE from "./vendor/three.module.min.js";
+import { GLTFLoader } from "./vendor/GLTFLoader.js";
 
 const COLOR = {
   heroBody: 0x2b5fcf, heroDark: 0x1e3f8f, heroGold: 0xf0c443, skin: 0xf4cfa0,
@@ -294,9 +295,41 @@ export function init(canvasEl, { WORLD, GATE, OBSTACLES, SPAWN_POINTS, ENEMY_DEF
   const heroMesh = buildHeroMesh();
   scene.add(heroMesh);
   registries.hero = heroMesh;
+  loadHeroModel(heroMesh);
 
   resize();
   return { camera, scene, renderer };
+}
+
+const HERO_TARGET_HEIGHT = 1.7;
+const HERO_MODEL_YAW_OFFSET = Math.PI;
+function loadHeroModel(group) {
+  new GLTFLoader().load(
+    "./assets/king.glb",
+    (gltf) => {
+      const model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const scale = HERO_TARGET_HEIGHT / Math.max(0.001, size.y);
+      const center = new THREE.Vector3(); box.getCenter(center);
+      model.scale.setScalar(scale);
+      model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
+      const wrapper = new THREE.Group();
+      wrapper.rotation.y = HERO_MODEL_YAW_OFFSET;
+      wrapper.add(model);
+
+      const parts = [];
+      model.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); parts.push(o); } });
+
+      while (group.children.length) group.remove(group.children[0]);
+      group.add(wrapper);
+      addShadowBlob(group, 0.4);
+      group.userData.parts = parts;
+      group.userData.height = HERO_TARGET_HEIGHT;
+    },
+    undefined,
+    (err) => console.warn("king.glb failed to load, keeping placeholder king", err)
+  );
 }
 
 function W(v) { return v / 30; }
