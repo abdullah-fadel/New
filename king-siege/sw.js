@@ -1,7 +1,8 @@
 const CACHE = "kings-siege-v1";
 const ASSETS = [
   "./", "./index.html", "./main.js", "./render3d.js", "./strings.js", "./style.css",
-  "./manifest.json", "./vendor/three.module.min.js",
+  "./manifest.json", "./vendor/three.module.min.js", "./vendor/GLTFLoader.js", "./vendor/BufferGeometryUtils.js",
+  "./assets/king.glb",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png",
 ];
 // Large, rarely-changing files: fine to serve from cache first.
