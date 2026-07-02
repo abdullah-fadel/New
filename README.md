@@ -1,3 +1,42 @@
+# Games
+
+## Desert Blade — سيف الصحراء
+
+An original 2D Arabian-fantasy platformer (Arabic UI, RTL). Everything is drawn procedurally
+on a single canvas — no sprites — and every sound is synthesized live with the Web Audio API,
+including a light generative hijaz-scale music loop. Designed primarily for smartphones in
+landscape (touch controls, fullscreen, high-DPI, 60 FPS) but fully playable on desktop.
+
+Feel & systems: coyote time, jump buffering, variable jump height, double jump, shaped gravity
+(floaty apex / snappy fall), squash & stretch, hit-stop, a camera with dead zone, look-ahead,
+shake and dynamic boss-fight zoom, soft shadows, parallax sunset background, particles with
+object pooling, telegraphed enemy and boss attacks, checkpoints, secrets, and a chained-princess
+rescue finale.
+
+### Play it
+
+```
+cd desert-blade
+python3 -m http.server 8080
+```
+
+Then open `http://localhost:8080` (it also works opened directly as a file — no build step).
+
+- **Desktop:** arrows / `A`,`D` to move, `Space`/`W`/`↑` to jump (double jump), `X`/`Z` to throw fire,
+  `S`/`↓` to climb down or drop through platforms, `Esc` to pause.
+- **Mobile:** on-screen touch buttons; landscape only.
+
+### Structure
+
+- `desert-blade/index.html` — page shell + menu/pause/level overlays
+- `desert-blade/css/style.css` — overlays, touch controls, rotate-device screen
+- `desert-blade/js/` — classic scripts loaded in order (no bundler):
+  `config` (canvas/DPI/tuning) → `audio` (synth SFX + music) → `input` → `levels` (ASCII maps)
+  → `core` (state + collision) → `particles` → `camera` → `player` → `enemies` → `boss`
+  → `render` (background/tiles) → `actors` (procedural characters) → `hud` → `game` (loop + states)
+
+---
+
 # King's Siege
 
 A top-down twin-stick action game for the browser (desktop, mobile and gamepad), inspired by the

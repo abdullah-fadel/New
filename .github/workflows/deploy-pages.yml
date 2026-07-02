@@ -1,4 +1,4 @@
-name: Deploy King's Siege to GitHub Pages
+name: Deploy games to GitHub Pages
 
 on:
   push:
@@ -27,10 +27,15 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Assemble site (king-siege at root, desert-blade at /desert-blade/)
+        run: |
+          mkdir -p _site
+          cp -r king-siege/* _site/
+          cp -r desert-blade _site/desert-blade
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./king-siege"
+          path: "./_site"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
