@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0E2A47">
+<title>سيف الصحراء — مغامرة عربية</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap"><canvas id="cv"></canvas></div>
+
+<button id="pauseBtn" aria-label="إيقاف مؤقت">⏸</button>
+
+<!-- Touch controls (movement on the right, actions on the left — RTL layout) -->
+<div id="touch">
+  <div class="tbtn" id="btnR">▶</div>
+  <div class="tbtn" id="btnL">◀</div>
+  <div class="tbtn" id="btnD">▼</div>
+  <div class="tbtn" id="btnJ">⬆</div>
+  <div class="tbtn" id="btnF">🔥</div>
+</div>
+
+<!-- Rotate-your-phone overlay (portrait) -->
+<div id="rotateOv">
+  <div class="rotIcon">📱↻</div>
+  <div>أدر هاتفك للوضع الأفقي للعب</div>
+</div>
+
+<div class="overlay" id="menuOv">
+  <div class="title">سيف الصحراء</div>
+  <div class="subtitle">مغامرة عربية — أنقذ الأميرة من زعيم اللصوص</div>
+  <button class="btn" id="startBtn">ابدأ المغامرة</button>
+  <button class="btn ghost small" id="soundBtn">🔊 الصوت: يعمل</button>
+  <div class="best" id="bestScore"></div>
+  <div class="hint">
+    الحاسبة: الأسهم أو A/D للحركة • مسافة أو W للقفز (قفزة مزدوجة) • X أو Z لرمي النار • S أو ▼ للنزول<br>
+    الموبايل: أزرار اللمس على الشاشة • اجمع العملات • احذر الأشواك والأعداء
+  </div>
+</div>
+
+<div class="overlay hidden" id="pauseOv">
+  <div class="title" style="font-size:42px;">إيقاف مؤقت</div>
+  <button class="btn" id="resumeBtn">استمرار</button>
+  <button class="btn ghost" id="soundBtn2">🔊 الصوت: يعمل</button>
+  <button class="btn ghost" id="quitBtn">القائمة الرئيسية</button>
+</div>
+
+<div class="overlay hidden" id="overOv">
+  <div class="title" style="font-size:46px;color:#e05a4e;">انتهت اللعبة</div>
+  <div class="stats" id="overStats"></div>
+  <button class="btn" id="retryBtn">حاول مرة ثانية</button>
+  <button class="btn ghost" id="quitBtn2">القائمة الرئيسية</button>
+</div>
+
+<div class="overlay hidden" id="lvlOv">
+  <div class="title" style="font-size:44px;">🏆 اكتملت المرحلة!</div>
+  <div class="stats" id="lvlStats"></div>
+  <button class="btn" id="nextBtn">المرحلة التالية</button>
+</div>
+
+<div class="overlay hidden" id="winOv">
+  <div class="title">👑 النصر!</div>
+  <div class="subtitle">هزمت زعيم اللصوص وأنقذت الأميرة… عاد السلام إلى المملكة</div>
+  <div class="stats" id="winStats"></div>
+  <button class="btn" id="againBtn">العب من جديد</button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/core.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/player.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/boss.js"></script>
+<script src="js/render.js"></script>
+<script src="js/actors.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
